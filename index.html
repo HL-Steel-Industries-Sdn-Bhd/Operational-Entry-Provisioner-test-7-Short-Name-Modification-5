@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Operational Entry Provisioner (OEP)</title>
+<style>
+    :root {
+        --primary-blue: #667eea;
+        --secondary-purple: #764ba2;
+        --light-blue: #e3f2fd;
+        --light-red: #ffebee;
+        --myr-blue: #bbdefb;
+        --sgd-red: #ffcdd2;
+        --success-green: #4caf50;
+        --warning-orange: #ff9800;
+        --error-red: #f44336;
+        --rd-green: #81c784;
+        --stock-blue: #64b5f6;
+        --sample-purple: #ba68c8;
+    }
+    
+    * { 
+        box-sizing: border-box; 
+        margin:0; 
+        padding:0; 
+        font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    }
+    
+    body { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        min-height:100vh; 
+        display:flex; 
+        justify-content:center; 
+        align-items:center; 
+        padding:20px; 
+    }
+    
+    .main-container {
+        display: flex;
+        max-width: 1400px;
+        width: 100%;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    
+    .left-panel {
+        flex: 0 0 350px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        padding: 25px;
+        height: fit-content;
+    }
+    
+    .center-panel {
+        flex: 1;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        padding: 30px;
+        min-width: 0;
+    }
+    
+    .right-panel {
+        flex: 0 0 350px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        padding: 25px;
+        height: fit-content;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    h1 { 
+        color:#333; 
+        text-align:center; 
+        margin-bottom:25px; 
+        font-size:28px; 
+        font-weight:600; 
+    }
+    
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary-blue);
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    /* QR Scanner Styles */
+    #qrScanner {
+        width: 100%;
+        height: 200px;
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    #scannerVideo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .scanner-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.9);
+        z-index: 2;
+    }
+    
+    .scanner-overlay.hidden {
+        display: none;
+    }
+    
+    #adminWelcome {
+        text-align: center;
+        padding: 15px;
+        background: linear-gradient(135deg, var(--light-blue) 0%, #e8f5e9 100%);
+        border-radius: 8px;
+        margin-top: 15px;
+        display: none;
+    }
+    
+    .welcome-text {
+        font-size: 16px;
+        color: #333;
+    }
+    
+    .admin-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--primary-blue);
+        margin-top: 5px;
+    }
+    
+    /* Form Styles */
+    .date-info { 
+        background:#f8f9fa; 
+        border-radius:8px; 
+        padding:15px; 
+        margin-bottom:25px; 
+        text-align:center; 
+        border-left:4px solid var(--primary-blue); 
+    }
+    
+    .current-month { 
+        font-size:18px; 
+        color:var(--primary-blue); 
+        font-weight:600; 
+    }
+    
+    .form-grid { 
+        display:grid; 
+        grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); 
+        gap:20px; 
+        margin-bottom:25px; 
+    }
+    
+    .form-group { 
+        display:flex; 
+        flex-direction:column; 
+    }
+    
+    label { 
+        font-weight:500; 
+        color:#555; 
+        margin-bottom:6px; 
+        font-size:14px; 
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .required::after {
+        content: " *";
+        color: var(--error-red);
+    }
+    
+    input, select { 
+        padding:12px; 
+        border:1px solid #ddd; 
+        border-radius:6px; 
+        font-size:14px; 
+        transition:border-color 0.3s; 
+    }
+    
+    input:focus, select:focus { 
+        outline:none; 
+        border-color:var(--primary-blue); 
+        box-shadow:0 0 0 2px rgba(102,126,234,0.1); 
+    }
+    
+    .full-width { 
+        grid-column:1 / -1; 
+    }
+    
+    /* Special SO types */
+    .rd-field {
+        background-color: rgba(129, 199, 132, 0.1) !important;
+        border-left: 4px solid var(--rd-green) !important;
+    }
+    
+    .stock-field {
+        background-color: rgba(100, 181, 246, 0.1) !important;
+        border-left: 4px solid var(--stock-blue) !important;
+    }
+    
+    .sample-field {
+        background-color: rgba(186, 104, 200, 0.1) !important;
+        border-left: 4px solid var(--sample-purple) !important;
+    }
+    
+    .auto-item-info {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+        padding: 5px 8px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        border-left: 3px solid var(--success-green);
+    }
+    
+    /* Currency input styles */
+    .currency-group {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .currency-prefix {
+        padding: 12px 15px;
+        background: #f5f5f5;
+        font-weight: 600;
+        color: #555;
+        border-right: 1px solid #ddd;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    .currency-input {
+        flex: 1;
+        border: none !important;
+        padding-left: 12px;
+    }
+    
+    .myr-input {
+        background-color: var(--myr-blue);
+    }
+    
+    .sgd-input {
+        background-color: var(--sgd-red);
+    }
+    
+    .currency-reminder {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+        padding: 8px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border-left: 3px solid var(--warning-orange);
+    }
+    
+    /* Date picker styles */
+    .date-input-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .date-input {
+        flex: 1;
+    }
+    
+    .calendar-button {
+        padding: 12px 15px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #555;
+        font-weight: 500;
+    }
+    
+    .calendar-button:hover {
+        background: #e9ecef;
+    }
+    
+    /* Button Styles */
+    .button-container { 
+        display:flex; 
+        justify-content:center; 
+        gap:15px; 
+        margin-top:30px; 
+    }
+    
+    button { 
+        padding:14px 30px; 
+        border:none; 
+        border-radius:6px; 
+        font-size:16px; 
+        font-weight:600; 
+        cursor:pointer; 
+        transition:all 0.3s; 
+    }
+    
+    .submit-btn { 
+        background:linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-purple) 100%); 
+        color:white; 
+        min-width:200px; 
+    }
+    
+    .submit-btn:hover:not(:disabled) { 
+        transform:translateY(-2px); 
+        box-shadow:0 5px 15px rgba(102,126,234,0.4); 
+    }
+    
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .submit-btn:active { 
+        transform:translateY(0); 
+    }
+    
+    .reset-btn { 
+        background:#f8f9fa; 
+        color:#666; 
+        border:1px solid #ddd; 
+    }
+    
+    .reset-btn:hover { 
+        background:#e9ecef; 
+    }
+    
+    /* QR Display Styles */
+    #qrDisplay {
+        width: 250px;
+        height: 250px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        padding: 10px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    #qrCodeCanvas {
+        width: 100%;
+        height: 100%;
+    }
+    
+    #qrPlaceholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        background: white;
+    }
+    
+    .download-btn {
+        background: linear-gradient(135deg, var(--success-green) 0%, #2e7d32 100%);
+        color: white;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 10px;
+        transition: all 0.3s;
+    }
+    
+    .download-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(76,175,80,0.4);
+    }
+    
+    .download-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    /* Status Message Styles */
+    .status-message { 
+        margin-top:20px; 
+        padding:12px; 
+        border-radius:6px; 
+        text-align:center; 
+        display:none; 
+    }
+    
+    .success { 
+        background:#d4edda; 
+        color:#155724; 
+        border:1px solid #c3e6cb; 
+    }
+    
+    .error { 
+        background:#f8d7da; 
+        color:#721c24; 
+        border:1px solid #f5c6cb; 
+    }
+    
+    .loading { 
+        background:#fff3cd; 
+        color:#856404; 
+        border:1px solid #ffeaa7; 
+    }
+    
+    .info { 
+        background:#d1ecf1; 
+        color:#0c5460; 
+        border:1px solid #bee5eb; 
+    }
+    
+    /* Character Counter */
+    .char-counter {
+        font-size: 12px;
+        color: #666;
+        text-align: right;
+        margin-top: 5px;
+    }
+    
+    .char-counter.warning {
+        color: var(--warning-orange);
+    }
+    
+    .char-counter.error {
+        color: var(--error-red);
+        font-weight: bold;
+    }
+    
+    /* Validation styles */
+    .valid {
+        border-color: var(--success-green) !important;
+    }
+    
+    .invalid {
+        border-color: var(--error-red) !important;
+    }
+    
+    /* Format info styles */
+    .format-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 5px;
+    }
+    
+    .format-text {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .combined-counter {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .combined-counter.warning {
+        color: var(--warning-orange);
+    }
+    
+    .combined-counter.error {
+        color: var(--error-red);
+        font-weight: bold;
+    }
+    
+    /* Modal Styles */
+    .duplicate-highlight {
+        border-color: var(--error-red) !important;
+        box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.1) !important;
+    }
+    
+    .trailing-space-highlight {
+        border-color: var(--warning-orange) !important;
+        box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.1) !important;
+    }
+    
+    /* Force submit indicator */
+    .force-submitted {
+        position: relative;
+    }
+    
+    .force-submitted::after {
+        content: "⚠️";
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 16px;
+        color: var(--error-red);
+    }
+
+    /* =====================================================
+       Customer Name + Short Name Row
+       两个字段都固定宽度，参考 Sales Order No. 单格宽度
+       ===================================================== */
+
+    /* 外层包裹：flex 横排，底部对齐 */
+    .customer-row-wrapper {
+        display: flex;
+        gap: 20px;
+        align-items: flex-end;
+        flex-wrap: nowrap;
+    }
+
+    /* Customer Name 列：固定宽度，不自适应拉伸 */
+    .customer-name-col {
+        flex: 0 0 250px;
+        width: 250px;
+        position: relative;
+    }
+
+    /* 内部 form-group 不需要额外 margin */
+    .customer-name-col .form-group {
+        margin-bottom: 0;
+    }
+
+    /* Customer Short Name 列：固定宽度 */
+    .customer-shortname-col {
+        flex: 0 0 150px;
+        width: 150px;
+    }
+
+    /* Short Name 输入框：完整边框和圆角 */
+    #customerShortName {
+        width: 100%;
+        border-radius: 6px;
+    }
+
+    /* Short Name 字数计数行 */
+    .shortname-counter-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 5px;
+        font-size: 12px;
+        color: #666;
+    }
+
+    /* 搜索按钮：暂时隐藏，DOM 保留供 JS 用 */
+    .lookup-btn {
+        display: none;
+    }
+
+    /* =====================================================
+       Autocomplete Dropdown（挂在 Customer Name 下方）
+       ===================================================== */
+    .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        z-index: 2500;
+        max-height: 240px;
+        overflow-y: auto;
+        display: none;
+        margin-top: 4px;
+        min-width: 320px;
+    }
+
+    .autocomplete-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        border-bottom: 1px solid #f5f5f5;
+        font-size: 13px;
+        transition: background 0.15s;
+    }
+
+    .autocomplete-item:hover {
+        background: #f4f7ff;
+    }
+
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+
+    .shortname-badge {
+        display: inline-block;
+        font-weight: 700;
+        color: var(--primary-blue);
+        background: #eef1ff;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        white-space: nowrap;
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .autocomplete-item .arrow-icon {
+        color: #aaa;
+        font-size: 11px;
+    }
+
+    .autocomplete-item .fullname-preview {
+        color: #444;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* =====================================================
+       Side Panel
+       ===================================================== */
+    .side-panel-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.4);
+        z-index: 2999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .side-panel-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .side-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 400px;
+        max-width: 90vw;
+        height: 100vh;
+        background: white;
+        box-shadow: -8px 0 30px rgba(0,0,0,0.25);
+        z-index: 3000;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .side-panel.open {
+        transform: translateX(0);
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 20px;
+        border-bottom: 1px solid #e0e0e0;
+        background: #fafafa;
+        flex-shrink: 0;
+    }
+
+    .panel-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .close-panel-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #888;
+        padding: 4px 8px;
+        border-radius: 4px;
+        line-height: 1;
+        transition: all 0.2s;
+    }
+
+    .close-panel-btn:hover {
+        background: #f0f0f0;
+        color: #333;
+    }
+
+    .panel-search {
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+        flex-shrink: 0;
+    }
+
+    .panel-search input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .panel-search input:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 2px rgba(102,126,234,0.1);
+    }
+
+    .panel-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 0;
+    }
+
+    .panel-list-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #f5f5f5;
+        transition: background 0.15s;
+        font-size: 14px;
+    }
+
+    .panel-list-item:hover {
+        background: #f0f4ff;
+    }
+
+    .panel-list-item:active {
+        background: #dbe4ff;
+    }
+
+    .panel-list-item.selected {
+        background: #e8edff;
+        border-left: 3px solid var(--primary-blue);
+    }
+
+    .shortname-badge-panel {
+        display: inline-block;
+        font-weight: 700;
+        color: var(--primary-blue);
+        background: #eef1ff;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 13px;
+        white-space: nowrap;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .fullname-text-panel {
+        color: #444;
+        flex: 1;
+    }
+
+    .arrow-icon-panel {
+        color: #aaa;
+        font-size: 12px;
+    }
+
+    .no-result {
+        padding: 40px 20px;
+        text-align: center;
+        color: #999;
+        font-size: 14px;
+    }
+
+    .no-result .icon {
+        font-size: 40px;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    /* =====================================================
+       Mobile Responsive
+       ===================================================== */
+    @media (max-width: 1200px) {
+        .main-container {
+            flex-direction: column;
+        }
+        
+        .left-panel, .center-panel, .right-panel {
+            flex: none;
+            width: 100%;
+        }
+
+        .side-panel {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .customer-row-wrapper {
+            flex-wrap: wrap;
+        }
+
+        .customer-name-col {
+            flex: 1 1 100%;
+            width: 100%;
+        }
+
+        .customer-shortname-col {
+            flex: 1 1 auto;
+            width: auto;
+        }
+    }
+    
+    @media (max-width: 600px){ 
+        .form-grid { grid-template-columns: 1fr; } 
+        .container { padding: 20px; } 
+        .button-container { flex-direction: column; }
+        .customer-row-wrapper { flex-direction: column; }
+        .customer-name-col,
+        .customer-shortname-col { flex: 1 1 100%; width: 100%; }
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</head>
+<body>
+<div class="main-container">
+    <!-- Left Panel: Admin QR Scanner -->
+    <div class="left-panel">
+        <h2>🔍 Admin Authentication</h2>
+        <div class="section-title">Scan Your Personal QR Code</div>
+        
+        <div id="qrScanner">
+            <div id="scannerOverlay" class="scanner-overlay">
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                    <p style="color: #666; margin-bottom: 15px;">Click to start camera for QR scanning</p>
+                    <button id="startScanner" onclick="startQRScanner()" style="padding: 10px 20px; background: var(--primary-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Start Camera
+                    </button>
+                </div>
+            </div>
+            <video id="scannerVideo" playsinline></video>
+            <canvas id="scannerCanvas" style="display: none;"></canvas>
+        </div>
+        
+        <button id="stopScanner" onclick="stopQRScanner()" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; display: none;">
+            Stop Scanner
+        </button>
+        
+        <div id="adminWelcome">
+            <div class="welcome-text">Welcome!</div>
+            <div class="admin-name" id="adminNameDisplay"></div>
+            <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                You are authenticated as Admin
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; font-size: 14px; color: #666;">
+            <strong>Note:</strong> Scan your personal QR code to authenticate as Admin. The QR should be from your personal employee page.
+        </div>
+    </div>
+    
+    <!-- Center Panel: Form Entry -->
+    <div class="center-panel">
+        <h1>📋 Operational Entry Provisioner (OEP)</h1>
+        
+        <div class="date-info">
+            <div class="current-month" id="currentMonth"></div>
+            <div style="margin-top:8px; color:#666; font-size:14px;" id="workflowInfo">Data will be saved to the corresponding Work Flow Google Sheet</div>
+        </div>
+        
+        <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+        
+        <form id="salesForm" target="hidden_iframe" method="post">
+            <div class="form-grid">
+                <!-- Sales Order No. -->
+                <div class="form-group">
+                    <label for="salesOrder" class="required">Sales Order No.</label>
+                    <input type="text" id="salesOrder" name="salesOrder" required 
+                           placeholder="e.g., 009999, 999999 (R&D), 000000 (Stock), or 888888 (Sample)"
+                           onblur="validateSalesOrderOnBlur(); checkSpecialItemNo(); validateSalesOrderTrailingSpace(this, true)"
+                           oninput="updateCombinedCounter(); validateSalesOrderTrailingSpace(this)"
+                           onchange="handleSalesOrderType()">
+                    <div class="format-info">
+                        <div class="format-text">
+                            Format: 6 digits + optional letter<br>
+                            Special: 999999=R&D, 000000=Stock, 888888=Sample
+                        </div>
+                        <div class="combined-counter" id="salesOrderCombinedCounter"></div>
+                    </div>
+                    <div id="soTypeInfo" class="auto-item-info" style="display: none;"></div>
+                </div>
+                
+                <!-- Item No. -->
+                <div class="form-group">
+                    <label for="itemNo" class="required">Item No.</label>
+                    <input type="text" id="itemNo" name="itemNo" required 
+                           placeholder="e.g., 23B"
+                           onblur="validateItemNoOnBlur(); validateItemNoTrailingSpace(this, true)"
+                           oninput="updateCombinedCounter(); validateItemNoTrailingSpace(this)">
+                    <div class="format-info">
+                        <div class="format-text">
+                            Format: Numbers or Numbers + 1 letter (e.g., 100 or 100A)
+                        </div>
+                        <div class="combined-counter" id="itemNoCombinedCounter"></div>
+                    </div>
+                    <div id="autoItemInfo" class="auto-item-info" style="display: none;"></div>
+                </div>
+
+                <!-- Customer Name & Short Name: 同一行，各自固定宽度 -->
+                <div class="form-group full-width" style="margin-bottom: 0;">
+                    <div class="customer-row-wrapper">
+
+                        <!-- Customer Name（含 autocomplete） -->
+                        <div class="customer-name-col">
+                            <div class="form-group" style="position: relative;">
+                                <label for="customerName" class="required">Customer Name</label>
+                                <input type="text" id="customerName" name="customerName" required
+                                       placeholder="Enter customer full name"
+                                       oninput="updateCombinedCounter(); validateTrailingSpaces(this, 'Customer Name'); handleCustomerNameInput()"
+                                       onfocus="handleCustomerNameInput()"
+                                       onblur="validateTrailingSpaces(this, 'Customer Name', true)"
+                                       autocomplete="off">
+                                <div id="customerNameAutocomplete" class="autocomplete-dropdown"></div>
+                            </div>
+                            <div class="format-info">
+                                <div class="format-text"></div>
+                                <div class="combined-counter" id="customerNameCombinedCounter"></div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Short Name（固定宽度，无搜索按钮） -->
+                        <div class="customer-shortname-col">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="customerShortName" class="required">Customer Short Name</label>
+                                <input type="text" id="customerShortName" name="customerShortName" required
+                                       placeholder="e.g., ABC123"
+                                       maxlength="7"
+                                       oninput="validateShortName(); handleShortNameInput()"
+                                       onfocus="handleShortNameInput()"
+                                       autocomplete="off">
+                            </div>
+                            <div class="shortname-counter-row">
+                                <span id="shortNameCounter">0</span>/7
+                            </div>
+                        </div>
+
+                        <!-- 搜索按钮：DOM 保留供 JS 监听，CSS 隐藏 -->
+                        <button type="button" class="lookup-btn" id="openPanelBtn" title="Search Customer List">🔍</button>
+                    </div>
+                </div>
+                
+                <!-- Item Name (Main) -->
+                <div class="form-group">
+                    <label for="itemNameMain" class="required">Item Name (Main)</label>
+                    <input type="text" id="itemNameMain" name="itemNameMain" required 
+                           placeholder="Enter main item name"
+                           oninput="updateCombinedCounter(); validateTrailingSpaces(this, 'Item Name (Main)')"
+                           onblur="validateTrailingSpaces(this, 'Item Name (Main)', true)">
+                    <div class="format-info">
+                        <div class="format-text"></div>
+                        <div class="combined-counter" id="itemNameCombinedCounter"></div>
+                    </div>
+                </div>
+                
+                <!-- Item Name (Sub) -->
+                <div class="form-group">
+                    <label for="itemNameSub">Item Name (Sub) - Optional</label>
+                    <input type="text" id="itemNameSub" name="itemNameSub" 
+                           placeholder="Enter sub item name (if any)">
+                </div>
+                
+                <!-- Dimension -->
+                <div class="form-group">
+                    <label for="dimension" class="required">Dimension</label>
+                    <input type="text" id="dimension" name="dimension" required 
+                           placeholder="e.g., 100x200x50 mm">
+                </div>
+                
+                <!-- Quantity -->
+                <div class="form-group">
+                    <label for="quantity" class="required">Quantity</label>
+                    <input type="text" id="quantity" name="quantity" required 
+                           placeholder="e.g., 100"
+                           onblur="validateQuantityOnBlur()"
+                           oninput="updateUnitOptions()">
+                    <div class="format-info">
+                        <div class="format-text">Format: Numbers only (e.g., 100)</div>
+                        <div></div>
+                    </div>
+                </div>
+                
+                <!-- Unit of Measurement -->
+                <div class="form-group">
+                    <label for="unit" class="required">Unit of Measurement</label>
+                    <select id="unit" name="unit" required onchange="validateUnit()">
+                        <option value="">Select Unit</option>
+                    </select>
+                </div>
+                
+                <!-- Estimated Delivery Date -->
+                <div class="form-group">
+                    <label for="estimatedDelivery">Estimated Delivery Date (Optional)</label>
+                    <div class="date-input-container">
+                        <input type="date" id="estimatedDelivery" name="estimatedDelivery" class="date-input">
+                        <button type="button" class="calendar-button" onclick="openCalendar()">📅 Calendar</button>
+                    </div>
+                </div>
+                
+                <!-- MYR -->
+                <div class="form-group">
+                    <label for="myr">MYR (RM)</label>
+                    <div class="currency-group">
+                        <div class="currency-prefix">RM</div>
+                        <input type="number" id="myr" name="myr" class="currency-input myr-input" step="0.01" placeholder="0.00" oninput="validateCurrency()">
+                    </div>
+                </div>
+                
+                <!-- SGD -->
+                <div class="form-group">
+                    <label for="sgd">SGD (S$)</label>
+                    <div class="currency-group">
+                        <div class="currency-prefix">S$</div>
+                        <input type="number" id="sgd" name="sgd" class="currency-input sgd-input" step="0.01" placeholder="0.00" oninput="validateCurrency()">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Currency Reminder -->
+            <div class="currency-reminder full-width">
+                💡 <strong>Important:</strong> Based on customer's country, fill either MYR or SGD box. 
+                Enter the <strong>total price</strong> (quantity × unit price) directly from Sales Order. 
+                Do not convert currency. Only one currency field is required.
+            </div>
+            
+            <!-- Combined Character Counter -->
+            <div class="full-width" style="margin-top: 20px;">
+                <div class="char-counter" id="combinedCounter">
+                    Combined characters (SO + Customer + ItemNo + ItemMain): <span id="combinedChars">0</span>/90
+                </div>
+            </div>
+            
+            <!-- Hidden fields -->
+            <input type="hidden" id="month" name="month">
+            <input type="hidden" id="year" name="year">
+            <input type="hidden" id="sheetId" name="sheetId">
+            <input type="hidden" id="adminName" name="adminName">
+            <input type="hidden" id="adminQR" name="adminQR">
+            <input type="hidden" id="timestamp" name="timestamp">
+            <input type="hidden" id="generatedQR" name="generatedQR">
+            <input type="hidden" id="qrFileName" name="qrFileName">
+            <input type="hidden" id="workflowSheetId" name="workflowSheetId">
+            <input type="hidden" id="generationLogId" name="generationLogId" value="1c6Z5tr3hsL5nFAt6m_nqB9xluxNxais5LS3dRN0sffY">
+            <input type="hidden" id="collectionSheetId" name="collectionSheetId" value="1QJxMVXoIPLIXOOJSzCMquJXu4q1vgRgCyNRKwsxf5TY">
+            <input type="hidden" id="qrFolderId" name="qrFolderId" value="1zWm5mGx1WvjhgHALQgNTvdUanPLdhny2">
+            
+            <div class="button-container">
+                <button type="button" class="reset-btn" onclick="resetForm()">Reset Form</button>
+                <button type="submit" class="submit-btn" id="submitBtn" onclick="return prepareAndSubmitForm(event)" disabled>
+                    Submit Drawing Information
+                </button>
+            </div>
+            <div id="statusMessage" class="status-message"></div>
+        </form>
+    </div>
+    
+    <!-- Right Panel: QR Display -->
+    <div class="right-panel">
+        <h2>📱 Generated QR Code</h2>
+        <div class="section-title">Production Worker Access QR</div>
+        
+        <div id="qrDisplay">
+            <canvas id="qrCodeCanvas"></canvas>
+            <div id="qrPlaceholder">
+                <div style="font-size: 48px; margin-bottom: 10px;">🔲</div>
+                <p style="text-align: center;">QR code will appear here after submission</p>
+            </div>
+        </div>
+        
+        <button id="downloadQR" class="download-btn" onclick="downloadQRCode()" disabled>
+            ⬇ Download QR Code
+        </button>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; width: 100%;">
+            <div style="font-weight: 600; color: #333; margin-bottom: 10px;">QR Information:</div>
+            <div style="font-size: 14px; color: #666; word-break: break-all;" id="qrInfo">
+                This QR links production workers to the operational entry form.<br><br>
+                URL format: https://hl-steel-industries-sdn-bhd.github.io/Drawing-QR-Template/?H=<br><br>
+                <strong>Example:</strong><br>
+                Full URL: https://hl-steel-industries-sdn-bhd.github.io/Drawing-QR-Template/?H=U08tODg4ODg4QSsyM0I=
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Side Panel Overlay -->
+<div class="side-panel-overlay" id="sidePanelOverlay"></div>
+
+<!-- Side Panel -->
+<div class="side-panel" id="sidePanel">
+    <div class="panel-header">
+        <h3>📋 Customer Short Name List</h3>
+        <button class="close-panel-btn" id="closePanelBtn" title="Close">✕</button>
+    </div>
+    <div class="panel-search">
+        <input type="text" id="panelSearchInput" placeholder="Search Short Name or Customer Name..." autocomplete="off">
+    </div>
+    <div class="panel-list" id="panelList">
+        <div class="no-result">
+            <span class="icon">📭</span>
+            Loading...
+        </div>
+    </div>
+</div>
+
+<!-- Calendar Modal -->
+<div id="calendarModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
+        <h3 style="margin-bottom: 20px;">Select Estimated Delivery Date</h3>
+        <input type="date" id="modalDatePicker" style="width: 100%; padding: 12px; font-size: 16px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="closeCalendar()" style="padding: 10px 20px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">Cancel</button>
+            <button onclick="applyCalendarDate()" style="padding: 10px 20px; background: var(--primary-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">Apply Date</button>
+        </div>
+    </div>
+</div>
+
+<!-- Duplicate Confirmation Modal -->
+<div id="duplicateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <h3 style="margin-bottom: 20px; color: #2c3e50; font-size: 24px;" id="duplicateModalTitle">⚠️ Duplicate Entry Found</h3>
+        <p style="margin-bottom: 15px; color: #555; font-size: 16px; line-height: 1.5;" id="duplicateModalMessage">The following combination already exists:</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+            <div><strong>Sales Order No.:</strong> <span id="duplicateSalesOrder" style="color: #e74c3c; font-weight: bold;"></span></div>
+            <div><strong>Item No.:</strong> <span id="duplicateItemNo" style="color: #e74c3c; font-weight: bold;"></span></div>
+            <div id="duplicateListInfo" style="display: none;"><strong>Found in:</strong> <span id="duplicateListName" style="color: #e74c3c; font-weight: bold;"></span></div>
+            <div><strong>Combination:</strong> <span id="duplicateCombination" style="font-weight: bold;"></span></div>
+        </div>
+        <p style="margin-bottom: 25px; color: #e74c3c; font-weight: bold; font-size: 14px;" id="duplicateNote">
+            <span style="font-size: 20px; margin-right: 5px;">ⓘ</span>
+            Note: SO numbers with different trailing letters (e.g., 009999 and 009999A) are considered the same.
+        </p>
+        <p style="margin-bottom: 25px; color: #555; font-size: 14px;">Do you want to force submit this entry anyway?</p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button onclick="forceSubmitEntry()" style="padding: 12px 40px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">Yes, Submit Anyway</button>
+            <button onclick="cancelDuplicateSubmission()" style="padding: 12px 40px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">No, Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Trailing Space Warning Modal -->
+<div id="trailingSpaceModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <h3 style="margin-bottom: 20px; color: #e67e22; font-size: 24px;">⚠️ Trailing Spaces Detected</h3>
+        <p style="margin-bottom: 15px; color: #555; font-size: 16px; line-height: 1.5;" id="trailingSpaceMessage">The following fields have trailing spaces:</p>
+        <div style="background: #fff9e6; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left; border-left: 4px solid #e67e22;">
+            <ul id="trailingSpaceFields" style="margin: 0; padding-left: 20px;"></ul>
+        </div>
+        <p style="margin-bottom: 25px; color: #e67e22; font-weight: bold; font-size: 14px;">
+            <span style="font-size: 20px; margin-right: 5px;">⚠️</span>
+            Important: Trailing spaces can cause issues in Google Sheets. Please remove them.
+        </p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button onclick="autoFixTrailingSpaces()" style="padding: 12px 40px; background: #3498db; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">Auto-Fix Spaces</button>
+            <button onclick="manualFixTrailingSpaces()" style="padding: 12px 40px; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">I'll Fix Manually</button>
+            <button onclick="forceSubmitWithSpaces()" style="padding: 12px 40px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">Submit Anyway</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby4e2V11K-HVja3TDFoMHV9U6t3lir8jmztdvVWCf-I6vv0IO3A6zCv-Bzt8krAE9oeYQ/exec';
+
+const WORKFLOW_SHEETS = {
+    '2025-12': '1qXNCBNvO3e8SUxHq8g84ditVSbNRvkw2g1M2C9bWw68',
+    '2026-1': '1rO89kIwrjCMzIbIjny8O8nT8kp-WSm6GDZH8CPQZysg',
+    '2026-2': '1H6koj_rbNziPupTsg0QrrWhtk6O-Lp7uZ-GQeQStVoE',
+    '2026-3': '1age5UUoTlJ1pm1RfX2PwFUTivWLHpnewpGdKQwtxdOs',
+    '2026-4': '1Td4FF4EfsoKuWjqqd8ARZbzCuTBHvbswO1vV0xb0sJg',
+    '2026-5': '1By25HTqcgFHlw2O-13257GNL1RTQTCJyHHdh3vJNBFM',
+    '2026-6': '180fhGeiXT3AotL_riFebt-_2qPb3jitTSAtZFPRInMc',
+    '2026-7': '1TYZTj9EJKQeJn1ODsl3Tlwvrd8WXCh5mu93dLiLg0gA',
+    '2026-8': '1WDeZJQ1k0QvDK99ucCxgIn_qG9WcJwNtCTuo06PSr34',
+    '2026-9': '1yrKFbSVd6fCVjyw-nTxhpbSTsPo-0ibgxqEbiI_GgQc',
+    '2026-10': '1-zpiBYsLqnzXUTGVSR4R0WkmWQ8dXavLjmCDhfkiDdE',
+    '2026-11': '1iwFvdvTshjpZOMO2YzfQw6FUJYGM8fP6_2MO4JsqaRk',
+    '2026-12': '1tMKv7LFEoEBcx7ial_T_0GRPQnqajhqnoNI4rFnB-5k'
+};
+
+const EMPLOYEES = {
+    'Ethan-Chuu-Gpc23kQxF8Z9tB17': 'Ethan Chuu',
+    'Victor-So-R4CwQ2ZY9NvbDhST': 'Victor So',
+    'Albert-nX4G9VmZ8eH2CLaD': 'Albert',
+    'Aung-Thant-P3JdM6KQ4BqvARZ5': 'Aung Thant',
+    'Bunyau-wZ2sF8mP1HkQ3DVL': 'Bunyau',
+    'Chin-Sau-Ying-Q9T2gA5XvM8JZb4c': 'Chin Sau Ying',
+    'Edika-LrF7W6eZV4sC3PN5': 'Edika',
+    'Han-Lin-Maung-8DqZKT9WHXQpM32A': 'Han Lin Maung',
+    'Luna-tXq4m89P3bKZHEVg': 'Luna',
+    'Myo-Min-Naing-2XQVf9cDyPWL7M8k': 'Myo Min Naing',
+    'Peter-Seah-a9CZTq73r4XHB8nG': 'Peter Seah',
+    'Piang-Soe-K7s4pP98tV2HGDJx': 'Piang Soe',
+    'Terrence-MZC4nsp8B6L1y2F9': 'Terrence',
+    'Wai-Phyo-f3XvGMkQ6NDTWP98': 'Wai Phyo',
+    'William-Choo-Y62T4PH9NVxAEZ3k': 'William Choo',
+    'Wong-Chok-Poh-sD7VAX4pW1fheN92': 'Wong Chok Poh',
+    'Jessie-Tew-H8C2GNPaX1DLRQtv': 'Jessie Tew',
+    'Shirley-Tew-WN6AsPeKZC97fqB3': 'Shirley Tew',
+    'Cyril-ZYLfM3Bv859aDRcQ': 'Cyril',
+    'Ocean-Chuu-T24pkC8M9GZ6NWAV': 'Ocean Chuu',
+    'Kuan-3x8BRtq6EQfMPSHd': 'Kuan',
+    'Michelle-Tew-DBRT2EC3S9kqKhlx': 'Michelle Tew',
+    'Ko-Gyi-sPTZ1Vg6YxJWhb8k': 'Ko Gyi',
+    'Zue-Hlang-Htoo-V3CSX4qL8K9WuZte': 'Zue Hlang Htoo',
+    'Candy-hD9Waf6NBm1VjYTw': 'Candy',
+    'Diana-S8aWXQTDMy46nVK2': 'Diana'
+};
+
+let currentAdmin = null;
+let qrScannerActive = false;
+let videoStream = null;
+let scannerContext = null;
+let currentQRDataUrl = null;
+let duplicateCheckData = null;
+let trailingSpaceFields = [];
+let isSpecialDuplicate = false;
+let shortNameListData = [];
+let sidePanelOpen = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateDateInfo();
+    updateUnitOptions();
+    loadShortNameList();
+    document.getElementById('unit').addEventListener('change', validateUnit);
+    document.getElementById('openPanelBtn').addEventListener('click', openSidePanel);
+    document.getElementById('closePanelBtn').addEventListener('click', closeSidePanel);
+    document.getElementById('sidePanelOverlay').addEventListener('click', closeSidePanel);
+    document.getElementById('panelSearchInput').addEventListener('input', handlePanelSearch);
+    document.addEventListener('click', function(e) {
+        const autocomplete = document.getElementById('customerNameAutocomplete');
+        const customerNameInput = document.getElementById('customerName');
+        const shortNameInput = document.getElementById('customerShortName');
+        if (!customerNameInput.contains(e.target) && !shortNameInput.contains(e.target) && !autocomplete.contains(e.target)) {
+            hideAutocomplete();
+        }
+    });
+});
+
+// ===== Short Name List =====
+async function loadShortNameList() {
+    try {
+        const response = await fetch(`${GAS_URL}?action=getShortNameList`);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+            shortNameListData = result.data;
+            if (sidePanelOpen) renderPanelList(shortNameListData);
+        } else {
+            shortNameListData = [];
+        }
+    } catch (error) {
+        shortNameListData = [];
+    }
+}
+
+function fuzzySearch(list, query) {
+    if (!query || query.trim() === '') return list.map(item => ({ ...item, score: 0 }));
+    const q = query.trim().toLowerCase().replace(/\s+/g, '');
+    return list.map(item => {
+        const shortName = (item.shortName || '').toLowerCase();
+        const fullName = (item.fullName || '').toLowerCase();
+        let score = 0;
+        if (shortName === q) score += 1000;
+        if (fullName === q) score += 800;
+        if (shortName.startsWith(q)) score += 500;
+        if (fullName.startsWith(q)) score += 400;
+        if (shortName.includes(q)) score += 300;
+        if (fullName.includes(q)) score += 200;
+        score += sequentialMatchScore(shortName, q) * 10;
+        score += sequentialMatchScore(fullName, q) * 5;
+        return { ...item, score };
+    }).filter(item => item.score > 0 || query.trim() === '')
+      .sort((a, b) => b.score - a.score);
+}
+
+function sequentialMatchScore(str, query) {
+    if (!query) return 0;
+    let qi = 0, score = 0, lastMatchIndex = -1;
+    for (let i = 0; i < str.length && qi < query.length; i++) {
+        if (str[i] === query[qi]) {
+            score++;
+            if (lastMatchIndex === i - 1) score += 2;
+            lastMatchIndex = i;
+            qi++;
+        }
+    }
+    return qi === query.length ? score : 0;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// ===== Side Panel =====
+function openSidePanel() {
+    document.getElementById('sidePanel').classList.add('open');
+    document.getElementById('sidePanelOverlay').classList.add('active');
+    sidePanelOpen = true;
+    setTimeout(() => document.getElementById('panelSearchInput').focus(), 300);
+    document.getElementById('panelSearchInput').value = '';
+    renderPanelList(shortNameListData);
+}
+
+function closeSidePanel() {
+    document.getElementById('sidePanel').classList.remove('open');
+    document.getElementById('sidePanelOverlay').classList.remove('active');
+    sidePanelOpen = false;
+    document.getElementById('panelSearchInput').value = '';
+}
+
+function handlePanelSearch() {
+    renderPanelList(shortNameListData);
+}
+
+function renderPanelList(data) {
+    const panelList = document.getElementById('panelList');
+    const filtered = fuzzySearch(data, document.getElementById('panelSearchInput').value);
+    if (filtered.length === 0) {
+        panelList.innerHTML = '<div class="no-result"><span class="icon">🔍</span>No matching records found</div>';
+        return;
+    }
+    panelList.innerHTML = filtered.map((item, index) => `
+        <div class="panel-list-item" data-short-name="${escapeHtml(item.shortName)}" data-full-name="${escapeHtml(item.fullName)}" data-index="${index}">
+            <span class="shortname-badge-panel">${escapeHtml(item.shortName)}</span>
+            <span class="arrow-icon-panel">→</span>
+            <span class="fullname-text-panel">${escapeHtml(item.fullName)}</span>
+        </div>
+    `).join('');
+    panelList.querySelectorAll('.panel-list-item').forEach(item => {
+        item.addEventListener('click', function() {
+            document.getElementById('customerShortName').value = this.getAttribute('data-short-name');
+            document.getElementById('customerName').value = this.getAttribute('data-full-name');
+            validateShortName();
+            updateCombinedCounter();
+            this.classList.add('selected');
+            setTimeout(() => this.classList.remove('selected'), 500);
+            setTimeout(closeSidePanel, 200);
+            hideAutocomplete();
+        });
+    });
+}
+
+// ===== Autocomplete =====
+function handleCustomerNameInput() {
+    const customerName = document.getElementById('customerName').value.trim();
+    if (customerName === '') {
+        const shortName = document.getElementById('customerShortName').value.trim();
+        if (shortName !== '') {
+            const filtered = fuzzySearch(shortNameListData, shortName);
+            if (filtered.length > 0) { showAutocomplete(filtered.slice(0, 5)); return; }
+        }
+        hideAutocomplete(); return;
+    }
+    const filtered = fuzzySearch(shortNameListData, customerName);
+    filtered.length > 0 ? showAutocomplete(filtered.slice(0, 5)) : hideAutocomplete();
+}
+
+function handleShortNameInput() {
+    const shortName = document.getElementById('customerShortName').value.trim();
+    if (shortName === '') {
+        const customerName = document.getElementById('customerName').value.trim();
+        if (customerName !== '') {
+            const filtered = fuzzySearch(shortNameListData, customerName);
+            if (filtered.length > 0) { showAutocomplete(filtered.slice(0, 5)); return; }
+        }
+        hideAutocomplete(); return;
+    }
+    const filtered = fuzzySearch(shortNameListData, shortName);
+    filtered.length > 0 ? showAutocomplete(filtered.slice(0, 5)) : hideAutocomplete();
+}
+
+function showAutocomplete(items) {
+    const dropdown = document.getElementById('customerNameAutocomplete');
+    if (!items || items.length === 0) { hideAutocomplete(); return; }
+    dropdown.innerHTML = items.map(item => `
+        <div class="autocomplete-item" data-short-name="${escapeHtml(item.shortName)}" data-full-name="${escapeHtml(item.fullName)}">
+            <span class="shortname-badge">${escapeHtml(item.shortName)}</span>
+            <span class="arrow-icon">→</span>
+            <span class="fullname-preview">${escapeHtml(item.fullName)}</span>
+        </div>
+    `).join('');
+    dropdown.style.display = 'block';
+    dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('customerShortName').value = this.getAttribute('data-short-name');
+            document.getElementById('customerName').value = this.getAttribute('data-full-name');
+            validateShortName();
+            updateCombinedCounter();
+            hideAutocomplete();
+        });
+    });
+}
+
+function hideAutocomplete() {
+    document.getElementById('customerNameAutocomplete').style.display = 'none';
+}
+
+// ===== QR Scanner =====
+async function startQRScanner() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        videoStream = stream;
+        document.getElementById('scannerVideo').srcObject = stream;
+        document.getElementById('scannerOverlay').classList.add('hidden');
+        document.getElementById('stopScanner').style.display = 'block';
+        qrScannerActive = true;
+        document.getElementById('scannerVideo').play();
+        scannerContext = document.getElementById('scannerCanvas').getContext('2d', { willReadFrequently: true });
+        requestAnimationFrame(scanQRCode);
+    } catch (err) {
+        alert("Unable to access camera. Please check permissions.");
+    }
+}
+
+function scanQRCode() {
+    if (!qrScannerActive || !scannerContext) return;
+    const scannerVideo = document.getElementById('scannerVideo');
+    const scannerCanvas = document.getElementById('scannerCanvas');
+    if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
+        scannerCanvas.height = scannerVideo.videoHeight;
+        scannerCanvas.width = scannerVideo.videoWidth;
+        scannerContext.drawImage(scannerVideo, 0, 0, scannerCanvas.width, scannerCanvas.height);
+        try {
+            const imageData = scannerContext.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+            if (code) { processScannedQR(code.data); stopQRScanner(); }
+        } catch (error) {}
+    }
+    if (qrScannerActive) requestAnimationFrame(scanQRCode);
+}
+
+function processScannedQR(qrData) {
+    try {
+        const url = new URL(qrData);
+        const pathParts = url.pathname.split('/').filter(p => p);
+        if (pathParts.length > 0) {
+            const employeeKey = pathParts[0];
+            if (EMPLOYEES[employeeKey]) {
+                currentAdmin = { name: EMPLOYEES[employeeKey], qrUrl: qrData, key: employeeKey };
+                document.getElementById('adminNameDisplay').textContent = currentAdmin.name;
+                document.getElementById('adminWelcome').style.display = 'block';
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('adminName').value = currentAdmin.name;
+                document.getElementById('adminQR').value = currentAdmin.qrUrl;
+                showStatus('✅ Admin authenticated: ' + currentAdmin.name, 'success');
+            } else {
+                showStatus('❌ Invalid employee QR code', 'error');
+            }
+        } else {
+            showStatus('❌ Invalid QR code format', 'error');
+        }
+    } catch (error) {
+        showStatus('❌ Error processing QR code: ' + error.message, 'error');
+    }
+}
+
+function stopQRScanner() {
+    qrScannerActive = false;
+    if (videoStream) { videoStream.getTracks().forEach(track => track.stop()); videoStream = null; }
+    document.getElementById('scannerVideo').srcObject = null;
+    document.getElementById('scannerOverlay').classList.remove('hidden');
+    document.getElementById('stopScanner').style.display = 'none';
+}
+
+// ===== Date =====
+function updateDateInfo() {
+    const now = new Date();
+    const monthYear = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const key = `${year}-${month}`;
+    const sheetId = WORKFLOW_SHEETS[key];
+    document.getElementById('currentMonth').textContent = `Current Month: ${monthYear}`;
+    if (sheetId) {
+        document.getElementById('workflowInfo').innerHTML = `Data will be saved to: <strong>${year} Work Flow ${month}</strong>`;
+        document.getElementById('month').value = month;
+        document.getElementById('year').value = year;
+        document.getElementById('workflowSheetId').value = sheetId;
+        document.getElementById('sheetId').value = sheetId;
+    } else {
+        document.getElementById('workflowInfo').textContent = 'No Google Sheet found for current month';
+    }
+}
+
+// ===== Sales Order Type =====
+function handleSalesOrderType() {
+    const salesOrderInput = document.getElementById('salesOrder');
+    const soValue = salesOrderInput.value.trim();
+    const soTypeInfo = document.getElementById('soTypeInfo');
+    salesOrderInput.classList.remove('rd-field', 'stock-field', 'sample-field');
+    soTypeInfo.style.display = 'none';
+    if (soValue === '999999') {
+        salesOrderInput.classList.add('rd-field');
+        soTypeInfo.innerHTML = '🔬 <strong>R&D Mode</strong> - Item No. will be checked against 2026 R&D List';
+        soTypeInfo.style.display = 'block';
+        soTypeInfo.style.borderLeftColor = 'var(--rd-green)';
+    } else if (soValue === '000000') {
+        salesOrderInput.classList.add('stock-field');
+        soTypeInfo.innerHTML = '📦 <strong>Stock Mode</strong> - Item No. will be checked against 2026 Stock List';
+        soTypeInfo.style.display = 'block';
+        soTypeInfo.style.borderLeftColor = 'var(--stock-blue)';
+    } else if (soValue === '888888') {
+        salesOrderInput.classList.add('sample-field');
+        soTypeInfo.innerHTML = '🧪 <strong>Sample Mode</strong> - Item No. will be checked against 2026 Sample List';
+        soTypeInfo.style.display = 'block';
+        soTypeInfo.style.borderLeftColor = 'var(--sample-purple)';
+    }
+}
+
+async function checkSpecialItemNo() {
+    const salesOrder = document.getElementById('salesOrder').value.trim();
+    const itemNoInput = document.getElementById('itemNo');
+    const autoItemInfo = document.getElementById('autoItemInfo');
+    itemNoInput.classList.remove('rd-field', 'stock-field', 'sample-field');
+    autoItemInfo.style.display = 'none';
+    if (salesOrder === '999999' || salesOrder === '000000' || salesOrder === '888888') {
+        try {
+            autoItemInfo.innerHTML = '⏳ Getting next Item No...';
+            autoItemInfo.style.display = 'block';
+            autoItemInfo.style.borderLeftColor = 'var(--warning-orange)';
+            const response = await fetch(`${GAS_URL}?action=getNextItemNo&salesOrder=${encodeURIComponent(salesOrder)}`);
+            const result = await response.json();
+            if (result.success && result.data) {
+                const { nextItemNo, lastItemNo, listName } = result.data;
+                if (salesOrder === '999999') { itemNoInput.classList.add('rd-field'); autoItemInfo.style.borderLeftColor = 'var(--rd-green)'; }
+                else if (salesOrder === '000000') { itemNoInput.classList.add('stock-field'); autoItemInfo.style.borderLeftColor = 'var(--stock-blue)'; }
+                else if (salesOrder === '888888') { itemNoInput.classList.add('sample-field'); autoItemInfo.style.borderLeftColor = 'var(--sample-purple)'; }
+                autoItemInfo.innerHTML = lastItemNo
+                    ? `📋 <strong>${listName}</strong><br>Last Item No.: ${lastItemNo}<br>Suggested next: <strong>${nextItemNo}</strong>`
+                    : `📋 <strong>${listName}</strong><br>Starting with: <strong>${nextItemNo}</strong>`;
+                if (!itemNoInput.value.trim()) { itemNoInput.value = nextItemNo; validateItemNoOnBlur(); updateCombinedCounter(); }
+                autoItemInfo.style.display = 'block';
+            }
+        } catch (error) {
+            autoItemInfo.innerHTML = '⚠️ Error getting next Item No.';
+            autoItemInfo.style.display = 'block';
+            autoItemInfo.style.borderLeftColor = 'var(--error-red)';
+        }
+    }
+}
+
+// ===== Trailing Space Validation =====
+function validateTrailingSpaces(inputElement, fieldName, showAlert = false) {
+    const value = inputElement.value;
+    if (value !== value.trim()) {
+        inputElement.classList.add('trailing-space-highlight');
+        if (showAlert && !trailingSpaceFields.includes(fieldName)) trailingSpaceFields.push(fieldName);
+        return false;
+    }
+    inputElement.classList.remove('trailing-space-highlight');
+    return true;
+}
+
+function validateSalesOrderTrailingSpace(inputElement, showAlert = false) {
+    const value = inputElement.value;
+    if (value !== value.trim()) {
+        inputElement.classList.add('trailing-space-highlight');
+        if (showAlert && !trailingSpaceFields.includes('Sales Order No.')) trailingSpaceFields.push('Sales Order No.');
+        return false;
+    }
+    inputElement.classList.remove('trailing-space-highlight');
+    return true;
+}
+
+function validateItemNoTrailingSpace(inputElement, showAlert = false) {
+    const value = inputElement.value;
+    if (value !== value.trim()) {
+        inputElement.classList.add('trailing-space-highlight');
+        if (showAlert && !trailingSpaceFields.includes('Item No.')) trailingSpaceFields.push('Item No.');
+        return false;
+    }
+    inputElement.classList.remove('trailing-space-highlight');
+    return true;
+}
+
+function showTrailingSpaceModal() {
+    const fieldsList = document.getElementById('trailingSpaceFields');
+    fieldsList.innerHTML = '';
+    trailingSpaceFields.forEach(field => {
+        const li = document.createElement('li');
+        li.textContent = field;
+        li.style.marginBottom = '5px';
+        fieldsList.appendChild(li);
+    });
+    document.getElementById('trailingSpaceModal').style.display = 'flex';
+}
+
+function autoFixTrailingSpaces() {
+    ['salesOrder', 'itemNo', 'itemNameMain', 'customerName'].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = el.value.trim();
+        el.classList.remove('trailing-space-highlight');
+    });
+    document.getElementById('trailingSpaceModal').style.display = 'none';
+    trailingSpaceFields = [];
+    continueWithSubmission();
+}
+
+function manualFixTrailingSpaces() {
+    document.getElementById('trailingSpaceModal').style.display = 'none';
+    trailingSpaceFields = [];
+    ['salesOrder', 'itemNo', 'itemNameMain', 'customerName'].forEach(id => {
+        const field = document.getElementById(id);
+        if (field.value.trim() !== field.value) { field.focus(); field.select(); }
+    });
+    showStatus('⚠️ Please fix the highlighted fields with trailing spaces', 'warning');
+}
+
+function forceSubmitWithSpaces() {
+    document.getElementById('trailingSpaceModal').style.display = 'none';
+    trailingSpaceFields = [];
+    continueWithSubmission(true);
+}
+
+// ===== Form Validation =====
+function validateSalesOrderOnBlur() {
+    const input = document.getElementById('salesOrder');
+    const value = input.value.trim();
+    if (value === '') { input.classList.remove('valid', 'invalid'); return true; }
+    if (value === '999999' || value === '000000' || value === '888888') { input.classList.add('valid'); input.classList.remove('invalid'); return true; }
+    if (/^\d{6}[A-Z]?$/.test(value)) { input.classList.add('valid'); input.classList.remove('invalid'); return true; }
+    input.classList.add('invalid'); input.classList.remove('valid');
+    alert('Invalid Sales Order No. format.\n\nPlease enter:\n• 6 digits (e.g., 009999)\n• OR 6 digits + 1 uppercase letter (e.g., 009999A)\n• OR 999999 for R&D\n• OR 000000 for Stock\n• OR 888888 for Sample\n\nExamples: 123456, 123456A, 999999, 000000, 888888');
+    return false;
+}
+
+function validateItemNoOnBlur() {
+    const input = document.getElementById('itemNo');
+    const value = input.value.trim();
+    if (value === '') { input.classList.remove('valid', 'invalid'); return true; }
+    if (/^\d+[A-Za-z]?$/.test(value) && !/^[A-Za-z]/.test(value)) { input.classList.add('valid'); input.classList.remove('invalid'); return true; }
+    input.classList.add('invalid'); input.classList.remove('valid');
+    alert('Invalid Item No. format.\n\nPlease enter:\n• Numbers only (e.g., 100)\n• OR Numbers + 1 letter at the end (e.g., 100A)\n\nNot allowed: A100, A, or other formats');
+    return false;
+}
+
+function validateQuantityOnBlur() {
+    const input = document.getElementById('quantity');
+    const value = input.value.trim();
+    if (value === '') { input.classList.remove('valid', 'invalid'); return true; }
+    if (/^\d+$/.test(value)) { input.classList.add('valid'); input.classList.remove('invalid'); return true; }
+    input.classList.add('invalid'); input.classList.remove('valid');
+    alert('Invalid Quantity format.\n\nPlease enter:\n• Numbers only (e.g., 100)\n\nNot allowed: letters or special characters');
+    return false;
+}
+
+function validateShortName() {
+    const input = document.getElementById('customerShortName');
+    const value = input.value;
+    const counter = document.getElementById('shortNameCounter');
+    counter.textContent = value.length;
+    if (!/^[A-Za-z0-9]{0,7}$/.test(value)) { input.value = value.replace(/[^A-Za-z0-9]/g, '').substring(0, 7); counter.textContent = input.value.length; }
+    if (value.length > 7) { input.value = value.substring(0, 7); counter.textContent = 7; }
+    if (input.value.length > 0 && input.value.length <= 7) { input.classList.add('valid'); input.classList.remove('invalid'); }
+    else if (input.value.length === 0) { input.classList.remove('valid', 'invalid'); }
+    else { input.classList.add('invalid'); input.classList.remove('valid'); }
+}
+
+function updateUnitOptions() {
+    const unitSelect = document.getElementById('unit');
+    const quantityValue = document.getElementById('quantity').value.trim();
+    const quantityMatch = quantityValue.match(/\d+/);
+    const quantity = quantityMatch ? parseInt(quantityMatch[0]) : 0;
+    unitSelect.innerHTML = '<option value="">Select Unit</option>';
+    let units = [];
+    if (quantity === 1) units = [{ value: 'UNIT', text: 'Unit' }, { value: 'PAIR', text: 'Pair' }, { value: 'SET', text: 'Set' }];
+    else if (quantity > 1) units = [{ value: 'UNITS', text: 'Units' }, { value: 'PAIRS', text: 'Pairs' }, { value: 'SETS', text: 'Sets' }];
+    else units = [{ value: 'UNIT', text: 'Unit' }, { value: 'PAIR', text: 'Pair' }, { value: 'SET', text: 'Set' }, { value: 'UNITS', text: 'Units' }, { value: 'PAIRS', text: 'Pairs' }, { value: 'SETS', text: 'Sets' }];
+    units.forEach(unit => {
+        const option = document.createElement('option');
+        option.value = unit.value; option.textContent = unit.text;
+        unitSelect.appendChild(option);
+    });
+}
+
+function validateUnit() {
+    const unitField = document.getElementById('unit');
+    if (unitField.value !== '') { unitField.classList.remove('invalid'); unitField.classList.add('valid'); }
+    else { unitField.classList.remove('valid'); }
+}
+
+function updateCombinedCounter() {
+    const salesOrder = document.getElementById('salesOrder').value;
+    const customerName = document.getElementById('customerName').value;
+    const itemNo = document.getElementById('itemNo').value;
+    const itemNameMain = document.getElementById('itemNameMain').value;
+    const combinedLength = salesOrder.length + customerName.length + itemNo.length + itemNameMain.length;
+    const combinedCounter = document.getElementById('combinedCounter');
+    document.getElementById('combinedChars').textContent = combinedLength;
+    document.getElementById('salesOrderCombinedCounter').textContent = `${salesOrder.length} chars`;
+    document.getElementById('customerNameCombinedCounter').textContent = `${customerName.length} chars`;
+    document.getElementById('itemNoCombinedCounter').textContent = `${itemNo.length} chars`;
+    document.getElementById('itemNameCombinedCounter').textContent = `${itemNameMain.length} chars`;
+    if (combinedLength > 90) {
+        combinedCounter.className = 'char-counter error';
+        combinedCounter.innerHTML = `⚠️ Combined characters: <span id="combinedChars">${combinedLength}</span>/90 - Exceeds Google Sheets tab name limit!`;
+    } else if (combinedLength > 80) {
+        combinedCounter.className = 'char-counter warning';
+        combinedCounter.innerHTML = `⚠️ Combined characters: <span id="combinedChars">${combinedLength}</span>/90 - Close to limit`;
+    } else {
+        combinedCounter.className = 'char-counter';
+        combinedCounter.innerHTML = `Combined characters (SO + Customer + ItemNo + ItemMain): <span id="combinedChars">${combinedLength}</span>/90`;
+    }
+}
+
+function validateCurrency() {
+    const myr = document.getElementById('myr').value;
+    const sgd = document.getElementById('sgd').value;
+    const myrInput = document.getElementById('myr');
+    const sgdInput = document.getElementById('sgd');
+    myrInput.classList.remove('valid', 'invalid');
+    sgdInput.classList.remove('valid', 'invalid');
+    if (myr || sgd) {
+        if (myr) myrInput.classList.add('valid');
+        if (sgd) sgdInput.classList.add('valid');
+        if (myr && sgd) showStatus('⚠️ Please fill only MYR OR SGD, not both', 'info');
+        return true;
+    }
+    return false;
+}
+
+// ===== Calendar =====
+function openCalendar() {
+    document.getElementById('modalDatePicker').value = document.getElementById('estimatedDelivery').value;
+    document.getElementById('calendarModal').style.display = 'flex';
+}
+function closeCalendar() { document.getElementById('calendarModal').style.display = 'none'; }
+function applyCalendarDate() { document.getElementById('estimatedDelivery').value = document.getElementById('modalDatePicker').value; closeCalendar(); }
+
+// ===== QR Generation =====
+function generateQRInHTML() {
+    const salesOrder = document.getElementById('salesOrder').value.trim();
+    const itemNo = document.getElementById('itemNo').value.trim();
+    const soNumber = salesOrder.startsWith('SO-') ? salesOrder : 'SO-' + salesOrder;
+    const combinedString = `${soNumber}&${itemNo}`;
+    const base64Encoded = btoa(combinedString);
+    const oetURL = `https://hl-steel-industries-sdn-bhd.github.io/Drawing-QR-Template/?H=${base64Encoded}`;
+    document.getElementById('generatedQR').value = oetURL;
+    document.getElementById('qrFileName').value = `${soNumber.replace('SO-', '')}-${itemNo}.png`;
+    document.getElementById('qrInfo').innerHTML = `<strong>URL:</strong><br><code style="font-size: 12px;">${oetURL}</code><br><br><strong>File Name:</strong><br>${soNumber.replace('SO-', '')}-${itemNo}.png<br><br><strong>Note:</strong> QR also saved to Google Drive`;
+    document.getElementById('qrPlaceholder').style.display = 'none';
+    const canvas = document.getElementById('qrCodeCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 250; canvas.height = 250;
+    ctx.fillStyle = 'white'; ctx.fillRect(0, 0, 250, 250);
+    QRCode.toCanvas(canvas, oetURL, { width: 230, margin: 2, color: { dark: '#000000', light: '#FFFFFF' } }, function(error) {
+        if (error) {
+            ctx.fillStyle = '#000000'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('QR Code for:', 125, 100);
+            ctx.fillText(oetURL.substring(0, 30), 125, 120);
+            ctx.fillText(oetURL.substring(30), 125, 140);
+        } else {
+            document.getElementById('downloadQR').disabled = false;
+            currentQRDataUrl = canvas.toDataURL('image/png');
+        }
+    });
+}
+
+function downloadQRCode() {
+    if (!currentQRDataUrl) return;
+    const link = document.createElement('a');
+    const salesOrder = document.getElementById('salesOrder').value.trim();
+    const itemNo = document.getElementById('itemNo').value.trim();
+    const soNumber = salesOrder.startsWith('SO-') ? salesOrder : 'SO-' + salesOrder;
+    link.href = currentQRDataUrl;
+    link.download = `${soNumber.replace('SO-', '')}-${itemNo}.png`;
+    link.style.display = 'none';
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+}
+
+// ===== Form Submission =====
+async function prepareAndSubmitForm(event) {
+    event.preventDefault();
+    if (!validateForm()) return false;
+    if (!currentAdmin) { showStatus('❌ Please scan your Admin QR code first', 'error'); return false; }
+    trailingSpaceFields = [];
+    validateTrailingSpaces(document.getElementById('itemNameMain'), 'Item Name (Main)', true);
+    validateTrailingSpaces(document.getElementById('customerName'), 'Customer Name', true);
+    validateSalesOrderTrailingSpace(document.getElementById('salesOrder'), true);
+    validateItemNoTrailingSpace(document.getElementById('itemNo'), true);
+    if (trailingSpaceFields.length > 0) { showTrailingSpaceModal(); return false; }
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.className = 'status-message loading';
+    statusDiv.innerHTML = '⏳ Checking for duplicates...';
+    statusDiv.style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').innerHTML = 'Checking...';
+    try {
+        const duplicateResult = await checkForDuplicates();
+        if (duplicateResult.duplicate) { showDuplicateModal(duplicateResult); return false; }
+        else { continueWithSubmission(); }
+    } catch (error) {
+        showStatus('⚠️ Duplicate check failed, proceeding with submission...', 'info');
+        setTimeout(() => continueWithSubmission(), 2000);
+    }
+    return true;
+}
+
+function continueWithSubmission(forceSubmit = false) {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.className = 'status-message loading';
+    statusDiv.innerHTML = forceSubmit ? '⏳ Force submitting data...' : '⏳ Processing and saving data...';
+    statusDiv.style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').innerHTML = 'Processing...';
+    generateQRInHTML();
+    const now = new Date();
+    document.getElementById('timestamp').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const forceSubmitInput = document.createElement('input');
+    forceSubmitInput.type = 'hidden'; forceSubmitInput.name = 'forceSubmit'; forceSubmitInput.value = forceSubmit ? 'true' : 'false';
+    document.getElementById('salesForm').appendChild(forceSubmitInput);
+    const form = document.getElementById('salesForm');
+    form.action = GAS_URL;
+    form.submit();
+    setTimeout(() => checkSubmissionResult(forceSubmit), 3000);
+}
+
+async function checkForDuplicates() {
+    const salesOrder = document.getElementById('salesOrder').value.trim();
+    const itemNo = document.getElementById('itemNo').value.trim();
+    if (!salesOrder || !itemNo) return { duplicate: false, error: 'Sales Order or Item No. is empty' };
+    duplicateCheckData = { salesOrder, itemNo };
+    try {
+        const response = await fetch(`${GAS_URL}?action=checkDuplicate&salesOrder=${encodeURIComponent(salesOrder)}&itemNo=${encodeURIComponent(itemNo)}`);
+        return await response.json();
+    } catch (error) {
+        return { duplicate: false, error: error.message };
+    }
+}
+
+function showDuplicateModal(duplicateResult) {
+    document.getElementById('duplicateSalesOrder').textContent = duplicateResult.salesOrder || 'Unknown';
+    document.getElementById('duplicateItemNo').textContent = duplicateResult.itemNo || 'Unknown';
+    const soBase = duplicateCheckData.salesOrder.replace(/[A-Z]$/, '');
+    document.getElementById('duplicateCombination').textContent = `${soBase} + ${duplicateCheckData.itemNo}`;
+    if (duplicateResult.specialDuplicate) {
+        document.getElementById('duplicateModalTitle').textContent = `⚠️ Duplicate in ${duplicateResult.listName}`;
+        document.getElementById('duplicateModalMessage').textContent = duplicateResult.message;
+        document.getElementById('duplicateListInfo').style.display = 'block';
+        document.getElementById('duplicateListName').textContent = duplicateResult.listName;
+        let noteText = duplicateResult.type === 'R&D' ? 'Note: R&D (999999) items must have unique Item Nos.'
+            : duplicateResult.type === 'Stock' ? 'Note: Stock (000000) items must have unique Item Nos.'
+            : 'Note: Sample (888888) items must have unique Item Nos.';
+        document.getElementById('duplicateNote').innerHTML = `<span style="font-size: 20px; margin-right: 5px;">ⓘ</span>${noteText}`;
+        isSpecialDuplicate = true;
+    } else {
+        document.getElementById('duplicateModalTitle').textContent = '⚠️ Duplicate Entry Found';
+        document.getElementById('duplicateModalMessage').textContent = 'The following combination already exists in the Collection of Operational Entry Form:';
+        document.getElementById('duplicateListInfo').style.display = 'none';
+        document.getElementById('duplicateNote').innerHTML = '<span style="font-size: 20px; margin-right: 5px;">ⓘ</span>Note: SO numbers with different trailing letters (e.g., 009999 and 009999A) are considered the same.';
+        isSpecialDuplicate = false;
+    }
+    document.getElementById('duplicateModal').style.display = 'flex';
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').innerHTML = 'Submit Drawing Information';
+    document.getElementById('statusMessage').style.display = 'none';
+}
+
+function forceSubmitEntry() { document.getElementById('duplicateModal').style.display = 'none'; continueWithSubmission(true); }
+
+function cancelDuplicateSubmission() {
+    document.getElementById('duplicateModal').style.display = 'none';
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').innerHTML = 'Submit Drawing Information';
+    let message = '❌ Submission cancelled. Entry already exists in Collection.';
+    if (isSpecialDuplicate) {
+        const so = document.getElementById('salesOrder').value.trim();
+        if (so === '999999') message = '❌ Submission cancelled. Item No. already exists in R&D list.';
+        else if (so === '000000') message = '❌ Submission cancelled. Item No. already exists in Stock list.';
+        else if (so === '888888') message = '❌ Submission cancelled. Item No. already exists in Sample list.';
+    }
+    showStatus(message, 'info');
+    highlightDuplicateFields();
+}
+
+function highlightDuplicateFields() {
+    ['salesOrder', 'itemNo'].forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        field.classList.add('invalid');
+        field.style.borderColor = '#e74c3c';
+        field.style.boxShadow = '0 0 0 2px rgba(231, 76, 60, 0.1)';
+    });
+    setTimeout(() => {
+        ['salesOrder', 'itemNo'].forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            field.classList.remove('invalid');
+            field.style.borderColor = '';
+            field.style.boxShadow = '';
+        });
+    }, 5000);
+}
+
+function checkSubmissionResult(forceSubmitted) {
+    const statusDiv = document.getElementById('statusMessage');
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').innerHTML = 'Submit Drawing Information';
+    statusDiv.className = 'status-message success';
+    statusDiv.innerHTML = forceSubmitted ? '✅ Entry force submitted successfully! (Duplicate entry)' : '✅ Data submitted successfully!';
+    const forceSubmitInput = document.querySelector('input[name="forceSubmit"]');
+    if (forceSubmitInput) forceSubmitInput.remove();
+    setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+}
+
+function validateForm() {
+    const requiredFields = ['salesOrder', 'customerName', 'customerShortName', 'itemNo', 'itemNameMain', 'dimension', 'quantity', 'unit'];
+    let isValid = true, errorMessage = '';
+    requiredFields.forEach(fieldId => document.getElementById(fieldId).classList.remove('invalid', 'valid'));
+    for (const fieldId of requiredFields) {
+        const field = document.getElementById(fieldId);
+        const label = field.previousElementSibling ? field.previousElementSibling.textContent.replace(' *', '') : fieldId;
+        if (!field.value.trim()) { isValid = false; errorMessage += `• ${label} is required\n`; field.classList.add('invalid'); }
+        else { field.classList.remove('invalid'); field.classList.add('valid'); }
+    }
+    if (document.getElementById('salesOrder').value.trim() && !validateSalesOrderOnBlur()) { isValid = false; errorMessage += '• Sales Order No. has invalid format\n'; }
+    if (document.getElementById('itemNo').value.trim() && !validateItemNoOnBlur()) { isValid = false; errorMessage += '• Item No. has invalid format\n'; }
+    if (document.getElementById('quantity').value.trim() && !validateQuantityOnBlur()) { isValid = false; errorMessage += '• Quantity has invalid format\n'; }
+    if (document.getElementById('customerShortName').value.length > 7) { isValid = false; errorMessage += '• Customer Short Name must be 7 characters or less\n'; }
+    const combinedLength = ['salesOrder','customerName','itemNo','itemNameMain'].reduce((sum, id) => sum + document.getElementById(id).value.length, 0);
+    if (combinedLength > 90) { isValid = false; errorMessage += '• Combined character count exceeds 90 (Google Sheets tab name limit)\n'; }
+    if (!document.getElementById('myr').value && !document.getElementById('sgd').value) { isValid = false; errorMessage += '• Please fill either MYR or SGD\n'; }
+    const unitField = document.getElementById('unit');
+    if (unitField.value === '') { isValid = false; errorMessage += '• Please select a Unit of Measurement\n'; unitField.classList.add('invalid'); }
+    else { unitField.classList.remove('invalid'); unitField.classList.add('valid'); }
+    if (!isValid) { alert('Please fix the following errors:\n\n' + errorMessage); showStatus('❌ Please fix form errors', 'error'); }
+    return isValid;
+}
+
+function resetForm() {
+    document.getElementById('salesForm').reset();
+    document.getElementById('statusMessage').style.display = 'none';
+    currentAdmin = null;
+    document.getElementById('adminWelcome').style.display = 'none';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('qrPlaceholder').style.display = 'flex';
+    const canvas = document.getElementById('qrCodeCanvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('downloadQR').disabled = true;
+    document.getElementById('qrInfo').innerHTML = 'This QR links production workers to the operational entry form.<br><br>URL format: https://hl-steel-industries-sdn-bhd.github.io/Drawing-QR-Template/?H=<br><br><strong>Example:</strong><br>Full URL: https://hl-steel-industries-sdn-bhd.github.io/Drawing-QR-Template/?H=U08tODg4ODg4QSsyM0I=';
+    document.querySelectorAll('input, select').forEach(input => input.classList.remove('valid', 'invalid', 'rd-field', 'stock-field', 'sample-field', 'trailing-space-highlight'));
+    document.getElementById('soTypeInfo').style.display = 'none';
+    document.getElementById('autoItemInfo').style.display = 'none';
+    hideAutocomplete();
+    updateCombinedCounter();
+    updateDateInfo();
+    updateUnitOptions();
+    document.getElementById('submitBtn').innerHTML = 'Submit Drawing Information';
+    currentQRDataUrl = null;
+    trailingSpaceFields = [];
+    isSpecialDuplicate = false;
+    ['salesOrderCombinedCounter','customerNameCombinedCounter','itemNoCombinedCounter','itemNameCombinedCounter'].forEach(id => document.getElementById(id).textContent = '');
+    document.getElementById('shortNameCounter').textContent = '0';
+}
+
+function showStatus(message, type) {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.className = `status-message ${type}`;
+    statusDiv.innerHTML = message;
+    statusDiv.style.display = 'block';
+    setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+}
+</script>
+</body>
+</html>
